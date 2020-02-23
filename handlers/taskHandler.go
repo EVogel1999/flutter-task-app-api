@@ -1,9 +1,14 @@
 package handlers
 
 import (
+	"encoding/json"
+	"log"
 	"net/http"
 
+	"example.com/m/v2/database"
+	"example.com/m/v2/schema"
 	"github.com/gorilla/mux"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -30,7 +35,39 @@ func setTaskHandler(router *mux.Router, db *mongo.Client) {
 }
 
 func createTask(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
+	var body schema.Task
+	err := json.NewDecoder(r.Body).Decode(&body)
 
+	if err != nil {
+		log.Fatal(err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"message": "Error: Could not parse json."}`))
+	}
+
+	task := schema.TaskDB{
+		ID:          primitive.NewObjectID(),
+		Name:        body.Name,
+		Description: body.Description,
+		Date:        body.Date,
+		Category:    body.Category,
+	}
+
+	ctx := database.GetContext()
+	result, err := db.Database("Task-App").Collection("Tasks").InsertOne(ctx, task)
+
+	if err != nil {
+		log.Fatal(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"message": "Error: Could not save to database."}`))
+	}
+
+	if result != nil {
+		w.WriteHeader(http.StatusCreated)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"id": "` + task.ID.Hex() + `"}`))
+	}
 }
 
 func getTask(w http.ResponseWriter, r *http.Request, db *mongo.Client) {

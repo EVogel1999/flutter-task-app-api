@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -41,4 +42,9 @@ func Connect() *mongo.Client {
 	fmt.Printf("\nConnected to database!")
 
 	return client
+}
+
+func GetContext() context.Context {
+	ctx, _ := context.WithTimeout(context.Background(), 15*time.Second)
+	return ctx
 }
