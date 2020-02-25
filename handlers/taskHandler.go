@@ -10,6 +10,7 @@ import (
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"gopkg.in/mgo.v2/bson"
 )
 
 func setTaskHandler(router *mux.Router, db *mongo.Client) {
@@ -71,7 +72,31 @@ func createTask(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
 }
 
 func getTask(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
+	params := mux.Vars(r)
+	id := params["id"]
 
+	var taskDB schema.TaskDB
+	_id, err := primitive.ObjectIDFromHex(id)
+	filter := bson.M{"_id": _id}
+	ctx := database.GetContext()
+	db.Database("Task-App").Collection("Tasks").FindOne(ctx, filter).Decode(&taskDB)
+
+	if err != nil {
+		log.Fatal(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"message": "Error: Could not save to database."}`))
+	}
+
+	task := schema.Task{
+		ID:          taskDB.ID.Hex(),
+		Name:        taskDB.Name,
+		Description: taskDB.Description,
+		Date:        taskDB.Date,
+		Category:    taskDB.Category,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(task)
 }
 
 func getTasks(w http.ResponseWriter, r *http.Request, db *mongo.Client) {

@@ -11,13 +11,13 @@ type Task struct {
 	Name        string    `json:"name"`
 	Date        time.Time `json:"date"`
 	Description string    `json:"description"`
-	Category    string    `json:"category"`
+	Category    []string  `json:"category"`
 }
 
 type TaskDB struct {
-	ID          primitive.ObjectID `json:"_id"`
+	ID          primitive.ObjectID `bson:"_id" json:"_id"`
 	Name        string             `json:"name"`
 	Date        time.Time          `json:"date"`
 	Description string             `json:"description"`
-	Category    string             `json:"category"`
+	Category    []string           `json:"category"`
 }
