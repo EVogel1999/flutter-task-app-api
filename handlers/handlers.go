@@ -7,4 +7,5 @@ import (
 
 func SetUpHandlers(router *mux.Router, client *mongo.Client) {
 	setTaskHandler(router, client)
+	setCategoryHandler(router, client)
 }
