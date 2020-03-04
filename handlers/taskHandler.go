@@ -1,15 +1,18 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"example.com/m/v2/database"
 	"example.com/m/v2/schema"
 	"github.com/gorilla/mux"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 	"gopkg.in/mgo.v2/bson"
 )
 
@@ -24,7 +27,7 @@ func setTaskHandler(router *mux.Router, db *mongo.Client) {
 
 	router.HandleFunc("/tasks", func(w http.ResponseWriter, r *http.Request) {
 		getTasks(w, r, db)
-	}).Methods("GET")
+	}).Methods("GET").Queries("page", "{[0-9]}")
 
 	router.HandleFunc("/tasks/{id}", func(w http.ResponseWriter, r *http.Request) {
 		editTask(w, r, db)
@@ -100,7 +103,44 @@ func getTask(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
 }
 
 func getTasks(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
+	page, err := strconv.ParseInt(r.FormValue("page"), 10, 64)
+	limit := int64(10)
+	skip := limit * page
+	if err != nil {
+		panic(err)
+	}
 
+	findOptions := options.Find()
+	findOptions.SetLimit(limit)
+	findOptions.Skip = &skip
+
+	var tasks []schema.Task
+	ctx := database.GetContext()
+	curr, err := db.Database("Task-App").Collection("Tasks").Find(ctx, bson.M{}, findOptions)
+	if err != nil {
+		panic(err)
+	}
+
+	for curr.Next(context.TODO()) {
+		var taskDB schema.TaskDB
+		err := curr.Decode(&taskDB)
+		if err != nil {
+			panic(err)
+		}
+
+		task := schema.Task{
+			ID:          taskDB.ID.Hex(),
+			Name:        taskDB.Name,
+			Description: taskDB.Description,
+			Date:        taskDB.Date,
+			Category:    taskDB.Category,
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(tasks)
 }
 
 func editTask(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
