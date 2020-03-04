@@ -144,7 +144,31 @@ func getTasks(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
 }
 
 func editTask(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
+	params := mux.Vars(r)
+	id := params["id"]
+	var body schema.Task
+	err := json.NewDecoder(r.Body).Decode(&body)
+	if err != nil {
+		panic(err)
+	}
 
+	_id, err := primitive.ObjectIDFromHex(id)
+	filter := bson.M{"_id": _id}
+	ctx := database.GetContext()
+	update := bson.M{
+		"$set": bson.M{
+			"name":        body.Name,
+			"category":    body.Category,
+			"description": body.Description,
+			"date":        body.Date,
+		},
+	}
+
+	db.Database("Task-App").Collection("Tasks").FindOneAndUpdate(ctx, filter, update)
+
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "Task successfully updated!"}`))
 }
 
 func deleteTask(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
