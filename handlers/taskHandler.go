@@ -172,5 +172,18 @@ func editTask(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
 }
 
 func deleteTask(w http.ResponseWriter, r *http.Request, db *mongo.Client) {
+	params := mux.Vars(r)
+	id := params["id"]
+	_id, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		panic(err)
+	}
+	filter := bson.M{"_id": _id}
+	ctx := database.GetContext()
 
+	db.Database("Task-App").Collection("Tasks").FindOneAndDelete(ctx, filter)
+
+	w.WriteHeader(http.StatusNoContent)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"message": "Task successfully deleted!"}`))
 }
